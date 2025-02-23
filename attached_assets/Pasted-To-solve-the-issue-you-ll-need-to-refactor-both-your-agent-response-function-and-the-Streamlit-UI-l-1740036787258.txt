@@ -1,0 +1,54 @@
+To solve the issue, you’ll need to refactor both your agent response function and the Streamlit UI logic so that updates occur incrementally rather than all at once. Here’s a step-by-step approach:
+
+1. Refactor get_collective_response() into a Generator
+
+Instead of collecting all responses and returning them at once, modify your function to yield each agent’s response as soon as it’s processed. For example:
+
+def get_collective_response():
+    responses = []
+    for agent in agents:
+        # Process the agent's response (this might be a blocking call)
+        response = agent.process_response()
+        responses.append(response)
+        # Yield the current list of responses so far
+        yield responses
+
+This change ensures that as each agent completes, an intermediate result is passed back to the caller.
+
+2. Update the Streamlit UI to Handle Incremental Updates
+
+In your main.py, adjust your code to iterate over the generator from get_collective_response(). Update both the progress bar and the display for agent responses as new data comes in. For example:
+
+import streamlit as st
+
+# Start with the coordinator analysis phase (assume it takes 0-40% of progress)
+coordinator_result = perform_coordinator_analysis()
+st.write("Coordinator Analysis Complete")
+progress_bar = st.progress(40)
+
+# Now process agent responses incrementally (40-90% progress)
+num_agents = len(agents)
+for responses in get_collective_response():
+    # Display the latest agent's response
+    st.write(responses[-1])
+    
+    # Calculate progress: each agent contributes a portion of the progress between 40% and 90%
+    agent_index = len(responses)
+    progress = 40 + (agent_index / num_agents) * 50  # 50% spread over agent responses
+    progress_bar.progress(int(progress))
+
+# Finalize progress to 100% when everything is complete
+progress_bar.progress(100)
+st.write("All responses processed.")
+
+Key points in this snippet:
+	•	Coordinator Analysis Phase: Start by running the analysis, then immediately set the progress bar to 40%.
+	•	Agent Responses: As each agent’s response is yielded, update the UI with the new response and increment the progress bar proportionally.
+	•	Completion: Once all responses are in, set the progress bar to 100%.
+
+3. Benefits of This Approach
+	•	Real-Time UI Feedback: The progress bar will update smoothly, reflecting the current phase and progress as each agent’s response is processed.
+	•	Incremental Display: Users will see each agent’s response as soon as it’s available, rather than waiting for all processing to finish.
+	•	Clear Progress Phases: By allocating distinct progress ranges (0–40% for coordinator analysis and 40–90% for agent responses), users can better understand where they are in the process.
+
+By converting your response function into a generator and updating your Streamlit code to consume these intermediate results, you achieve the expected behavior: smooth progress updates and immediate display of agent responses as they complete.
