@@ -89,77 +89,119 @@ with st.sidebar:
         if 'agent_group' not in st.session_state:
             st.session_state.agent_group = AgentGroup(api)
 
-        # Coordinator setup
-        if not st.session_state.coordinator:
-            st.subheader("Setup Coordinator")
-            if st.session_state.available_models:
-                # Get saved coordinator model or default to first
-                default_coordinator_model = st.session_state.selected_models.get('coordinator')
-                default_index = 0
-                if default_coordinator_model in st.session_state.available_models:
-                    default_index = list(st.session_state.available_models.keys()).index(default_coordinator_model)
-
-                coordinator_model = st.selectbox(
-                    "Coordinator Model",
-                    list(st.session_state.available_models.keys()),
-                    key="coordinator_model",
-                    index=default_index
-                )
-
-                if st.button("Setup Coordinator"):
-                    coordinator = CoordinatorAgent(
-                        name="Coordinator",
-                        model=st.session_state.available_models[coordinator_model],
-                        system_message=DEFAULT_AGENT_ROLES["coordinator"]["system_message"]
-                    )
-                    st.session_state.agent_group.add_agent(coordinator)
-                    st.session_state.coordinator = coordinator
-                    # Save selected model
-                    st.session_state.selected_models['coordinator'] = coordinator_model
-                    # Save to file
-                    save_model_selections()
-                    st.success("Coordinator agent setup successfully!")
-
-        # Agent creation
-        st.subheader("Create New Agent")
-
-        # Show roles with descriptions
-        roles = [role for role in DEFAULT_AGENT_ROLES.keys() if role != "coordinator"]
-
-        agent_role = st.selectbox(
-            "Role",
-            roles,
-            format_func=lambda x: f"{DEFAULT_AGENT_ROLES[x]['name']}: {DEFAULT_AGENT_ROLES[x]['description']}"
-        )
-
         if st.session_state.available_models:
-            # Get saved model for this role or default to first
-            default_model = st.session_state.selected_models.get(agent_role)
+            # Coordinator Agent Setup
+            st.subheader("1. Coordinator")
+            default_coordinator_model = st.session_state.selected_models.get('coordinator')
+            default_index = 0
+            if default_coordinator_model in st.session_state.available_models:
+                default_index = list(st.session_state.available_models.keys()).index(default_coordinator_model)
+
+            coordinator_model = st.selectbox(
+                "Select Model",
+                list(st.session_state.available_models.keys()),
+                key="coordinator_model",
+                index=default_index
+            )
+
+            # Human Assistant Setup
+            st.subheader("2. Human Assistant")
+            default_model = st.session_state.selected_models.get('user_proxy')
             default_index = 0
             if default_model in st.session_state.available_models:
                 default_index = list(st.session_state.available_models.keys()).index(default_model)
 
-            agent_model = st.selectbox(
-                "Model",
+            human_model = st.selectbox(
+                "Select Model",
                 list(st.session_state.available_models.keys()),
+                key="human_model",
                 index=default_index
             )
 
-            if st.button("Add Agent"):
-                role_config = DEFAULT_AGENT_ROLES[agent_role]
-                new_agent = Agent(
+            # Code Assistant Setup
+            st.subheader("3. Code Assistant")
+            default_model = st.session_state.selected_models.get('coder')
+            default_index = 0
+            if default_model in st.session_state.available_models:
+                default_index = list(st.session_state.available_models.keys()).index(default_model)
+
+            code_model = st.selectbox(
+                "Select Model",
+                list(st.session_state.available_models.keys()),
+                key="code_model",
+                index=default_index
+            )
+
+            # Critic Assistant Setup
+            st.subheader("4. Critic Assistant")
+            default_model = st.session_state.selected_models.get('critic')
+            default_index = 0
+            if default_model in st.session_state.available_models:
+                default_index = list(st.session_state.available_models.keys()).index(default_model)
+
+            critic_model = st.selectbox(
+                "Select Model",
+                list(st.session_state.available_models.keys()),
+                key="critic_model",
+                index=default_index
+            )
+
+            # Setup button for all agents
+            st.markdown("---")
+            if st.button("🚀 Setup All Agents"):
+                # Setup Coordinator
+                coordinator = CoordinatorAgent(
+                    name="Coordinator",
+                    model=st.session_state.available_models[coordinator_model],
+                    system_message=DEFAULT_AGENT_ROLES["coordinator"]["system_message"]
+                )
+                st.session_state.agent_group.add_agent(coordinator)
+                st.session_state.coordinator = coordinator
+                st.session_state.selected_models['coordinator'] = coordinator_model
+
+                # Setup Human Assistant
+                role_config = DEFAULT_AGENT_ROLES["user_proxy"]
+                human_assistant = Agent(
                     name=role_config["name"],
-                    role=agent_role,
-                    model=st.session_state.available_models[agent_model],
+                    role="user_proxy",
+                    model=st.session_state.available_models[human_model],
                     system_message=role_config["system_message"]
                 )
-                st.session_state.agent_group.add_agent(new_agent)
-                st.session_state.current_agents.append(role_config["name"])
-                # Save selected model
-                st.session_state.selected_models[agent_role] = agent_model
-                # Save to file
+                st.session_state.agent_group.add_agent(human_assistant)
+                if role_config["name"] not in st.session_state.current_agents:
+                    st.session_state.current_agents.append(role_config["name"])
+                st.session_state.selected_models['user_proxy'] = human_model
+
+                # Setup Code Assistant
+                role_config = DEFAULT_AGENT_ROLES["coder"]
+                code_assistant = Agent(
+                    name=role_config["name"],
+                    role="coder",
+                    model=st.session_state.available_models[code_model],
+                    system_message=role_config["system_message"]
+                )
+                st.session_state.agent_group.add_agent(code_assistant)
+                if role_config["name"] not in st.session_state.current_agents:
+                    st.session_state.current_agents.append(role_config["name"])
+                st.session_state.selected_models['coder'] = code_model
+
+                # Setup Critic Assistant
+                role_config = DEFAULT_AGENT_ROLES["critic"]
+                critic_assistant = Agent(
+                    name=role_config["name"],
+                    role="critic",
+                    model=st.session_state.available_models[critic_model],
+                    system_message=role_config["system_message"]
+                )
+                st.session_state.agent_group.add_agent(critic_assistant)
+                if role_config["name"] not in st.session_state.current_agents:
+                    st.session_state.current_agents.append(role_config["name"])
+                st.session_state.selected_models['critic'] = critic_model
+
+                # Save all selections
                 save_model_selections()
-                st.success(f"Agent {role_config['name']} added successfully!")
+                st.success("✅ All agents have been set up successfully!")
+
         else:
             st.warning("No models available. Please check your API key.")
 
