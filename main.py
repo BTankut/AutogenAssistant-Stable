@@ -43,19 +43,36 @@ with st.sidebar:
         api = OpenRouterAPI(api_key)
 
         # Fetch available models
-        models_response = api.get_models()
-        if models_response["success"]:
-            available_models = {
-                model["id"]: model["id"]
-                for model in models_response["models"]
-            }
-            st.session_state.available_models = available_models
+        @handle_error
+        def fetch_models():
+            models_response = api.get_models()
+            if models_response["success"]:
+                available_models = {
+                    model["id"]: model["id"]
+                    for model in models_response["models"]
+                }
+                st.session_state.available_models = available_models
+                return True
+            return False
 
+        # Load model selections
+        @handle_error
+        def load_model_selections():
+            with open('.model_selections.json', 'r') as f:
+                saved_models = json.load(f)
+                st.session_state.selected_models = saved_models
+
+        # Save model selections
+        @handle_error
+        def save_model_selections():
+            with open('.model_selections.json', 'w') as f:
+                json.dump(st.session_state.selected_models, f)
+
+        # Fetch available models
+        if fetch_models():
             # Load saved model selections if they exist
             try:
-                with open('.model_selections.json', 'r') as f:
-                    saved_models = json.load(f)
-                    st.session_state.selected_models = saved_models
+                load_model_selections()
             except FileNotFoundError:
                 if 'selected_models' not in st.session_state:
                     st.session_state.selected_models = {
@@ -100,8 +117,7 @@ with st.sidebar:
                     # Save selected model
                     st.session_state.selected_models['coordinator'] = coordinator_model
                     # Save to file
-                    with open('.model_selections.json', 'w') as f:
-                        json.dump(st.session_state.selected_models, f)
+                    save_model_selections()
                     st.success("Coordinator agent setup successfully!")
 
         # Agent creation
@@ -142,8 +158,7 @@ with st.sidebar:
                 # Save selected model
                 st.session_state.selected_models[agent_role] = agent_model
                 # Save to file
-                with open('.model_selections.json', 'w') as f:
-                    json.dump(st.session_state.selected_models, f)
+                save_model_selections()
                 st.success(f"Agent {role_config['name']} added successfully!")
         else:
             st.warning("No models available. Please check your API key.")
@@ -274,7 +289,6 @@ else:
                                     try:
                                         # Initialize metrics
                                         total_tokens = 0
-                                        responses = []
 
                                         # Get collective response generator
                                         response_generator = st.session_state.agent_group.get_collective_response(user_input)
@@ -307,9 +321,6 @@ else:
                                                 # Update progress bar
                                                 progress_bar.progress(int(progress))
 
-                                                # Collect responses
-                                                responses.append(response["agent_response"])
-
                                             elif response["phase"] == "complete":
                                                 # Final Processing (90-100%)
                                                 progress_placeholder.write("✨ Finalizing...")
@@ -322,7 +333,7 @@ else:
 
                                                 # Show detailed responses in collapsed expander
                                                 with st.expander("🔍 Detailed Agent Responses", expanded=False):
-                                                    for resp in responses:
+                                                    for resp in response["responses"]:
                                                         st.write(f"\n**{resp['agent']}** response:")
                                                         st.write(resp["response"])
 
