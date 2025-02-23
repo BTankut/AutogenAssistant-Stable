@@ -77,6 +77,7 @@ class AgentGroup:
         self.api = api
         self.agents = {}
         self.coordinator = None
+        self.response_cache = {}
 
     def add_agent(self, agent: Agent):
         if isinstance(agent, CoordinatorAgent):
@@ -87,12 +88,6 @@ class AgentGroup:
     def remove_agent(self, agent_name: str):
         if agent_name in self.agents:
             del self.agents[agent_name]
-
-    def __init__(self, api: OpenRouterAPI):
-        self.api = api
-        self.agents = {}
-        self.coordinator = None
-        self.response_cache = {}
 
     def get_response(self, agent_name: str) -> Dict[str, Any]:
         if agent_name not in self.agents:
@@ -113,7 +108,10 @@ class AgentGroup:
 
         if response["success"]:
             response["time"] = process_time
-        return response
+            self.response_cache[cache_key] = response
+            return response
+        else:
+            return response
 
     def get_collective_response(self, user_input: str) -> Generator[Dict[str, Any], None, None]:
         """Get coordinated responses from multiple agents, yielding intermediate results"""

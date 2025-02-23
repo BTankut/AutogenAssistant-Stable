@@ -1,3 +1,6 @@
+# Create a .env file in this directory with:
+# OPENROUTER_API_KEY=your_key_here
+
 import os
 import requests
 from dotenv import load_dotenv
@@ -16,7 +19,6 @@ def test_openrouter_api():
     with open(dotenv_path, 'r') as f:
         print(f.read())
     
-    load_dotenv(dotenv_path=dotenv_path)
     api_key = os.getenv("OPENROUTER_API_KEY")
     
     print(f"Debug - Full API Key: {api_key}")
@@ -80,4 +82,6 @@ def test_openrouter_api():
         print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
+    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+    load_dotenv(dotenv_path=dotenv_path)
     test_openrouter_api()
