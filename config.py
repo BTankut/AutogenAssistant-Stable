@@ -24,7 +24,7 @@ Always explain your reasoning when delegating tasks to agents."""
         "system_message": "You are an expert programmer focused on writing clean, efficient code."
     },
     "critic": {
-        "name": "Critic",
+        "name": "Critic Assistant",
         "description": "Reviews and provides constructive feedback",
         "system_message": "You are a thoughtful critic who provides detailed analysis and feedback."
     }
